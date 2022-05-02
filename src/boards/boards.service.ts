@@ -1,49 +1,80 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Board, BoardStatus } from './board.model';
+import { BoardStatus } from './board-status.enum';
 
-import { v1 as uuid } from 'uuid';
 import { createBoardDto } from './dto/create-board.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { BoardRepository } from './board.repository';
+import { Board } from './board.entity';
 
 @Injectable()
 export class BoardsService {
-  private boards: Board[] = [];
+  constructor(
+    @InjectRepository(BoardRepository)
+    private boardRepository: BoardRepository,
+  ) {}
 
-  getAllBoards(): Board[] {
-    return this.boards;
-  }
+  // private boards: Board[] = []; 데이터 베이스를 이용할 것이므로 로컬메모리를 쓰는 이 문장은 지운다.
+  // getAllBoards(): Board[] {
+  //   return this.boards;
+  // }
 
-  // createBoard(title: string, description: string) {
-  createBoard(createBoardDto: createBoardDto) {
+  async createBoard(createBoardDto: createBoardDto): Promise<Board> {
     const { title, description } = createBoardDto;
-    const board: Board = {
-      id: uuid(),
+
+    const board = this.boardRepository.create({
       title,
       description,
-      // title: title,  위 처럼 해줘도 똑같다.
-      // description: description,
       status: BoardStatus.PUBLIC,
-    };
-    this.boards.push(board);
+    });
+    await this.boardRepository.save(board);
     return board;
   }
+  // // createBoard(title: string, description: string) {
+  // createBoard(createBoardDto: createBoardDto) {
+  //   const { title, description } = createBoardDto;
+  //   const board: Board = {
+  //     id: uuid(),
+  //     title,
+  //     description,
+  //     // title: title,  위 처럼 해줘도 똑같다.
+  //     // description: description,
+  //     status: BoardStatus.PUBLIC,
+  //   };
+  //   this.boards.push(board);
+  //   return board;
+  // }
 
-  getBoardById(id: string): Board {
-    const found = this.boards.find((board) => board.id === id);
+  async getBoardById(id: number): Promise<Board> {
+    const found = await this.boardRepository.findOne({ id });
 
     if (!found) {
       throw new NotFoundException(`Can't find Board with id ${id}`);
     }
     return found;
   }
+  // getBoardById(id: string): Board {
+  //   const found = this.boards.find((board) => board.id === id);
+  //   if (!found) {
+  //     throw new NotFoundException(`Can't find Board with id ${id}`);
+  //   }
+  //   return found;
+  // }
 
-  deleteBoard(id: string): void {
-    const found = this.getBoardById(id);
-    this.boards = this.boards.filter((board) => board.id !== found.id);
-  }
+  async deleteBoard(id: number): Promise<void> {
+    const result = await this.boardRepository.delete(id);
 
-  updateBoardStatus(id: string, status: BoardStatus): Board {
-    const board = this.getBoardById(id);
-    board.status = status;
-    return board;
+    if (result.affected === 0) {
+      throw new NotFoundException(`Can't find Board with id ${id}`);
+    }
+    console.log('result', result);
   }
+  // deleteBoard(id: string): void {
+  //   const found = this.getBoardById(id);
+  //   this.boards = this.boards.filter((board) => board.id !== found.id);
+  // }
+  // updateBoardStatus(id: string, status: BoardStatus): Board {
+  //   const board = this.getBoardById(id);
+  //   board.status = status;
+  //   return board;
+  // }
 }
