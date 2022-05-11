@@ -1,3 +1,5 @@
+import { User } from './../auth/user.entity';
+import { AuthGuard } from '@nestjs/passport';
 import {
   Body,
   Controller,
@@ -8,6 +10,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  UseGuards,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
@@ -15,16 +18,18 @@ import { resourceLimits } from 'worker_threads';
 import { BoardStatus } from './board-status.enum';
 import { Board } from './board.entity';
 import { BoardsService } from './boards.service';
-import { createBoardDto } from './dto/create-board.dto';
+import { CreateBoardDto } from './dto/create-board.dto';
 import { BoardStatusValidationPipe } from './pipes/board-status-validation.pipe';
+import { GetUser } from 'src/auth/get-user.decorator';
 
 @Controller('boards') //경로다.
+@UseGuards(AuthGuard())
 export class BoardsController {
   constructor(private boardsService: BoardsService) {} //보드서비스 이용하기위해 종속성 주입.
 
   @Get()
-  getAllBoard(): Promise<Board[]> {
-    return this.boardsService.getAllBoards();
+  getAllBoard(@GetUser() user: User): Promise<Board[]> {
+    return this.boardsService.getAllBoards(user);
   }
   // @Get('/')
   // getAllBoard(): Board[] {
@@ -33,8 +38,11 @@ export class BoardsController {
 
   @Post()
   @UsePipes(ValidationPipe)
-  createBoard(@Body() createBoardDto: createBoardDto): Promise<Board> {
-    return this.boardsService.createBoard(createBoardDto);
+  createBoard(
+    @Body() CreateBoardDto: CreateBoardDto,
+    @GetUser() user: User,
+  ): Promise<Board> {
+    return this.boardsService.createBoard(CreateBoardDto, user);
   }
   // // @Post()
   // // createBoard(
@@ -62,8 +70,11 @@ export class BoardsController {
   // }
 
   @Delete('/:id')
-  deleteBoard(@Param('id', ParseIntPipe) id): Promise<void> {
-    return this.boardsService.deleteBoard(id);
+  deleteBoard(
+    @Param('id', ParseIntPipe) id,
+    @GetUser() user: User,
+  ): Promise<void> {
+    return this.boardsService.deleteBoard(id, user);
   }
   // @Delete('/:id')
   // deleteBoard(@Param('id') id: string): void {
